@@ -5,6 +5,8 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"io/ioutil"
+	"os"
 	"strings"
 )
 
@@ -35,9 +37,21 @@ func Parse(filename string) ([]Tag, error) {
 		types: make([]string, 0),
 	}
 
-	f, err := parser.ParseFile(p.fset, filename, nil, 0)
-	if err != nil {
-		return nil, err
+	var f *ast.File
+	var err error
+
+	if filename != "-" {
+		f, err = parser.ParseFile(p.fset, filename, nil, 0)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		bytes, err := ioutil.ReadAll(os.Stdin)
+
+		f, err = parser.ParseFile(p.fset, "", string(bytes), 0)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// package

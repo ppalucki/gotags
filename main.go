@@ -22,6 +22,7 @@ var (
 	sortOutput   bool
 	silent       bool
 	printTree    bool // for debugging
+	stdin        bool
 )
 
 // Initialize flags.
@@ -31,6 +32,7 @@ func init() {
 	flag.BoolVar(&sortOutput, "sort", true, "sort tags")
 	flag.BoolVar(&silent, "silent", false, "do not produce any output on error")
 	flag.BoolVar(&printTree, "tree", false, "print syntax tree (debugging)")
+	flag.BoolVar(&stdin, "stdin", false, "read source from stdin")
 
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "gotags version %s\n\n", VERSION)
@@ -79,34 +81,50 @@ func main() {
 		return
 	}
 
-	files, err := getFileNames()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "cannot get specified files\n\n")
-		flag.Usage()
-		os.Exit(1)
-	}
-
-	if len(files) == 0 {
-		fmt.Fprintf(os.Stderr, "no file specified\n\n")
-		flag.Usage()
-		os.Exit(1)
-	}
-
-	if printTree {
-		PrintTree(flag.Arg(0))
-		return
-	}
-
 	tags := []Tag{}
-	for _, file := range files {
-		ts, err := Parse(file)
+
+	if stdin {
+
+		fmt.Println("reading from stdin...")
+
+		ts, err := Parse("-")
 		if err != nil {
 			if !silent {
 				fmt.Fprintf(os.Stderr, "parse error: %s\n\n", err)
 			}
-			continue
 		}
 		tags = append(tags, ts...)
+
+	} else {
+
+		files, err := getFileNames()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "cannot get specified files\n\n")
+			flag.Usage()
+			os.Exit(1)
+		}
+
+		if len(files) == 0 {
+			fmt.Fprintf(os.Stderr, "no file specified\n\n")
+			flag.Usage()
+			os.Exit(1)
+		}
+
+		if printTree {
+			PrintTree(flag.Arg(0))
+			return
+		}
+
+		for _, file := range files {
+			ts, err := Parse(file)
+			if err != nil {
+				if !silent {
+					fmt.Fprintf(os.Stderr, "parse error: %s\n\n", err)
+				}
+				continue
+			}
+			tags = append(tags, ts...)
+		}
 	}
 
 	output := createMetaTags()
